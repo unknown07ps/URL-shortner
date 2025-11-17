@@ -1,13 +1,14 @@
 {
   "name": "url-shortner",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
- "scripts": {
-  "dev": "nodemon src/server.js",
-  "start": "node src/server.js"
-},
-  "keywords": [],
+  "description": "Advanced URL Shortener with Analytics, QR Codes, and Rate Limiting",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "test:redis": "node test-redis.js"
+  },
+  "keywords": ["url-shortener", "qr-code", "analytics", "rate-limiting"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -20,7 +21,9 @@
     "ioredis": "^5.8.2",
     "mongoose": "^8.19.4",
     "morgan": "^1.10.1",
-    "rate-limit-redis": "^4.2.3"
+    "qrcode": "^1.5.3",
+    "rate-limit-redis": "^4.2.3",
+    "ua-parser-js": "^1.0.37"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
