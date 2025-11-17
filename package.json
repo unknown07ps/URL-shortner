@@ -8,7 +8,12 @@
     "start": "node src/server.js",
     "test:redis": "node test-redis.js"
   },
-  "keywords": ["url-shortener", "qr-code", "analytics", "rate-limiting"],
+  "keywords": [
+    "url-shortener",
+    "qr-code",
+    "analytics",
+    "rate-limiting"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
