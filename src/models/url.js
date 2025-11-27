@@ -18,33 +18,59 @@ const clickSchema = new mongoose.Schema({
 const urlSchema = new mongoose.Schema({
   originalUrl: {
     type: String,
-    required: true,
-    trim: true
+    required: [true, 'Original URL is required'],
+    trim: true,
+    validate: {
+      validator: function(v) {
+        try {
+          const url = new URL(v);
+          return ['http:', 'https:'].includes(url.protocol);
+        } catch (e) {
+          return false;
+        }
+      },
+      message: 'Invalid URL format. Must be http or https.'
+    }
   },
   shortCode: {
     type: String,
     required: true,
     unique: true,
     trim: true,
-    index: true
+    index: true,
+    minlength: [3, 'Short code must be at least 3 characters'],
+    maxlength: [20, 'Short code cannot exceed 20 characters'],
+    match: [/^[a-zA-Z0-9_-]+$/, 'Short code can only contain letters, numbers, hyphens and underscores']
   },
   customAlias: {
     type: String,
     trim: true,
     sparse: true,
-    unique: true
+    unique: true,
+    minlength: [3, 'Custom alias must be at least 3 characters'],
+    maxlength: [50, 'Custom alias cannot exceed 50 characters'],
+    match: [/^[a-zA-Z0-9_-]+$/, 'Custom alias can only contain letters, numbers, hyphens and underscores']
   },
   qrCode: {
-    type: String // Base64 encoded QR code
+    type: String
   },
   clicks: {
     type: Number,
-    default: 0
+    default: 0,
+    min: 0
   },
   clickDetails: [clickSchema],
   customDomain: {
     type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        const domainRegex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
+        return domainRegex.test(v);
+      },
+      message: 'Invalid domain format'
+    }
   },
   expiresAt: {
     type: Date,
@@ -56,7 +82,8 @@ const urlSchema = new mongoose.Schema({
   },
   tags: [{
     type: String,
-    trim: true
+    trim: true,
+    maxlength: [50, 'Tag cannot exceed 50 characters']
   }],
   metadata: {
     title: String,
@@ -64,7 +91,7 @@ const urlSchema = new mongoose.Schema({
     image: String
   },
   createdBy: {
-    type: String, // IP address or user ID
+    type: String,
     required: true
   },
   lastAccessed: {
@@ -75,19 +102,17 @@ const urlSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
 urlSchema.index({ createdBy: 1, createdAt: -1 });
 urlSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 urlSchema.index({ isActive: 1 });
 urlSchema.index({ customDomain: 1, shortCode: 1 });
+urlSchema.index({ tags: 1 });
 
-// Virtual for full short URL
 urlSchema.virtual('shortUrl').get(function() {
   const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
   return `${baseUrl}/${this.shortCode}`;
 });
 
-// Method to record a click with analytics
 urlSchema.methods.recordClick = async function(clickData) {
   this.clicks += 1;
   this.lastAccessed = new Date();
@@ -109,7 +134,6 @@ urlSchema.methods.recordClick = async function(clickData) {
   return await this.save();
 };
 
-// Static method to get analytics summary
 urlSchema.statics.getAnalyticsSummary = async function(shortCode) {
   const url = await this.findOne({ shortCode });
   
@@ -122,14 +146,12 @@ urlSchema.statics.getAnalyticsSummary = async function(shortCode) {
     click => click.timestamp >= last7Days
   );
   
-  // Group by date
   const clicksByDate = recentClicks.reduce((acc, click) => {
     const date = click.timestamp.toISOString().split('T')[0];
     acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
   
-  // Group by country
   const clicksByCountry = recentClicks.reduce((acc, click) => {
     if (click.country) {
       acc[click.country] = (acc[click.country] || 0) + 1;
@@ -137,7 +159,6 @@ urlSchema.statics.getAnalyticsSummary = async function(shortCode) {
     return acc;
   }, {});
   
-  // Group by device
   const clicksByDevice = recentClicks.reduce((acc, click) => {
     if (click.device) {
       acc[click.device] = (acc[click.device] || 0) + 1;
@@ -158,7 +179,6 @@ urlSchema.statics.getAnalyticsSummary = async function(shortCode) {
   };
 };
 
-// Ensure virtual fields are serialized
 urlSchema.set('toJSON', { virtuals: true });
 urlSchema.set('toObject', { virtuals: true });
 

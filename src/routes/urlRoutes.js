@@ -6,7 +6,6 @@ const AnalyticsService = require('../services/analyticsService');
 const { createUrlLimiter, batchCreateLimiter, qrCodeLimiter } = require('../middlewares/rateLimiter');
 const { setCache, getCache, deleteCache } = require('../services/cacheService');
 
-//Helper function to generate short code
 function generateShortCode(length = 6) {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
@@ -16,17 +15,15 @@ function generateShortCode(length = 6) {
   return result;
 }
 
-//Helper function to validate URL
 function isValidUrl(url) {
   try {
-    new URL(url);
-    return true;
+    const urlObj = new URL(url);
+    return ['http:', 'https:'].includes(urlObj.protocol);
   } catch (e) {
     return false;
   }
 }
 
-//POST /api/urls - Create short URL (with rate limiting)
 router.post('/', createUrlLimiter, async (req, res) => {
   try {
     const { 
@@ -34,11 +31,10 @@ router.post('/', createUrlLimiter, async (req, res) => {
       customAlias, 
       generateQR = false,
       customDomain,
-      expiresIn, // in hours
+      expiresIn,
       tags = []
     } = req.body;
 
-    //Validate original URL
     if (!originalUrl) {
       return res.status(400).json({ 
         success: false, 
@@ -53,8 +49,21 @@ router.post('/', createUrlLimiter, async (req, res) => {
       });
     }
 
-    //Check if custom alias already exists
     if (customAlias) {
+      if (customAlias.length < 3 || customAlias.length > 50) {
+        return res.status(400).json({
+          success: false,
+          message: 'Custom alias must be between 3 and 50 characters'
+        });
+      }
+      
+      if (!/^[a-zA-Z0-9_-]+$/.test(customAlias)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Custom alias can only contain letters, numbers, hyphens and underscores'
+        });
+      }
+      
       const existing = await Url.findOne({ 
         $or: [
           { shortCode: customAlias },
@@ -70,15 +79,22 @@ router.post('/', createUrlLimiter, async (req, res) => {
       }
     }
 
-    //Generate short code
     let shortCode = customAlias || generateShortCode();
+    let attempts = 0;
+    const maxAttempts = 10;
     
-    //Ensure uniqueness
-    while (await Url.findOne({ shortCode })) {
+    while (await Url.findOne({ shortCode }) && attempts < maxAttempts) {
       shortCode = generateShortCode();
+      attempts++;
+    }
+    
+    if (attempts >= maxAttempts) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to generate unique short code. Please try again.'
+      });
     }
 
-    //Create URL document
     const urlData = {
       originalUrl,
       shortCode,
@@ -88,7 +104,6 @@ router.post('/', createUrlLimiter, async (req, res) => {
       createdBy: AnalyticsService.getClientIP(req)
     };
 
-    //Set expiration if provided
     if (expiresIn) {
       const expirationDate = new Date();
       expirationDate.setHours(expirationDate.getHours() + parseInt(expiresIn));
@@ -97,7 +112,6 @@ router.post('/', createUrlLimiter, async (req, res) => {
 
     const url = new Url(urlData);
 
-    //Generate QR code if requested
     if (generateQR) {
       const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
       const shortUrl = customDomain 
@@ -109,7 +123,6 @@ router.post('/', createUrlLimiter, async (req, res) => {
 
     await url.save();
 
-    //Cache the URL
     await setCache(`url:${shortCode}`, {
       originalUrl: url.originalUrl,
       shortCode: url.shortCode,
@@ -130,6 +143,16 @@ router.post('/', createUrlLimiter, async (req, res) => {
 
   } catch (error) {
     console.error('Error creating short URL:', error);
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation error',
+        errors: messages
+      });
+    }
+    
     res.status(500).json({ 
       success: false, 
       message: 'Server error', 
@@ -138,7 +161,6 @@ router.post('/', createUrlLimiter, async (req, res) => {
   }
 });
 
-//POST /api/urls/batch : Create multiple URLs at once
 router.post('/batch', batchCreateLimiter, async (req, res) => {
   try {
     const { urls } = req.body;
@@ -165,7 +187,6 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
       const { originalUrl, customAlias, tags } = urls[i];
 
       try {
-        //Validate URL
         if (!originalUrl || !isValidUrl(originalUrl)) {
           errors.push({ 
             index: i, 
@@ -175,10 +196,8 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
           continue;
         }
 
-        //Generate short code
         let shortCode = customAlias || generateShortCode();
         
-        //Check uniqueness
         if (await Url.findOne({ shortCode })) {
           if (customAlias) {
             errors.push({ 
@@ -191,7 +210,6 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
           shortCode = generateShortCode();
         }
 
-        //Create URL
         const url = new Url({
           originalUrl,
           shortCode,
@@ -202,7 +220,6 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
 
         await url.save();
 
-        //Cache
         await setCache(`url:${shortCode}`, {
           originalUrl: url.originalUrl,
           shortCode: url.shortCode
@@ -243,7 +260,6 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
   }
 });
 
-//GET /api/urls/:shortCode/qr - Generate QR code for existing URL
 router.get('/:shortCode/qr', qrCodeLimiter, async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -274,7 +290,6 @@ router.get('/:shortCode/qr', qrCodeLimiter, async (req, res) => {
       return res.send(svg);
     }
 
-    // Default to PNG
     const qrBuffer = await QRService.generateQRCodeBuffer(shortUrl);
     
     if (download) {
@@ -294,7 +309,6 @@ router.get('/:shortCode/qr', qrCodeLimiter, async (req, res) => {
   }
 });
 
-//GET /api/urls/:shortCode/analytics - Get analytics for a URL
 router.get('/:shortCode/analytics', async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -337,7 +351,6 @@ router.get('/:shortCode/analytics', async (req, res) => {
   }
 });
 
-//GET /api/urls - Get all URLs (dashboard)
 router.get('/', async (req, res) => {
   try {
     const { 
@@ -351,7 +364,6 @@ router.get('/', async (req, res) => {
 
     const query = { isActive: true };
 
-    // Search filter
     if (search) {
       query.$or = [
         { originalUrl: { $regex: search, $options: 'i' } },
@@ -360,7 +372,6 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    // Tag filter
     if (tag) {
       query.tags = tag;
     }
@@ -372,12 +383,11 @@ router.get('/', async (req, res) => {
       .sort({ [sortBy]: sortOrder })
       .skip(skip)
       .limit(parseInt(limit))
-      .select('-clickDetails') // Exclude detailed click data for list view
+      .select('-clickDetails')
       .lean();
 
     const total = await Url.countDocuments(query);
 
-    // Get overview stats
     const allUrls = await Url.find({ isActive: true }).lean();
     const overview = AnalyticsService.getOverviewStats(allUrls);
 
@@ -405,7 +415,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// DELETE /api/urls/:shortCode - Delete a URL
 router.delete('/:shortCode', async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -419,11 +428,9 @@ router.delete('/:shortCode', async (req, res) => {
       });
     }
 
-    // Soft delete
     url.isActive = false;
     await url.save();
 
-    // Remove from cache
     await deleteCache(`url:${shortCode}`);
 
     res.json({
@@ -441,7 +448,6 @@ router.delete('/:shortCode', async (req, res) => {
   }
 });
 
-// PUT /api/urls/:shortCode - Update URL
 router.put('/:shortCode', async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -461,7 +467,6 @@ router.put('/:shortCode', async (req, res) => {
 
     await url.save();
 
-    // Update cache
     await setCache(`url:${shortCode}`, {
       originalUrl: url.originalUrl,
       shortCode: url.shortCode,
