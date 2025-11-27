@@ -1,5 +1,3 @@
-// src/models/Url.js
-
 const mongoose = require('mongoose');
 
 const clickSchema = new mongoose.Schema({
@@ -164,4 +162,4 @@ urlSchema.statics.getAnalyticsSummary = async function(shortCode) {
 urlSchema.set('toJSON', { virtuals: true });
 urlSchema.set('toObject', { virtuals: true });
 
-module.exports = mongoose.model('Url', urlSchema);
+module.exports = mongoose.model('url', urlSchema);

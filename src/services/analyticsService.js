@@ -1,4 +1,3 @@
-// src/services/analyticsService.js
 
 const UAParser = require('ua-parser-js');
 
@@ -19,7 +18,7 @@ class AnalyticsService {
       device: result.device.type || 'desktop',
       browser: result.browser.name || 'Unknown',
       os: result.os.name || 'Unknown',
-      // Note: For country/city, you'd need a GeoIP service
+      
       country: null,
       city: null
     };

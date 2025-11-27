@@ -1,5 +1,3 @@
-// src/services/cacheService.js
-
 const Redis = require('ioredis');
 
 const redis = new Redis({
@@ -13,11 +11,11 @@ const redis = new Redis({
 });
 
 redis.on('connect', () => {
-  console.log('✅ Redis connected');
+  console.log('Redis connected');
 });
 
 redis.on('error', (err) => {
-  console.error('❌ Redis error:', err);
+  console.error('Redis error:', err);
 });
 
 async function getCache(key) {

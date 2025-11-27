@@ -1,5 +1,3 @@
-// src/controllers/urlController.js
-
 const Url = require('../models/url');
 const { getNextSequence } = require('../services/counterService');
 const { encode } = require('../utils/base62');

@@ -1,4 +1,3 @@
-// src/services/qrService.js
 
 const QRCode = require('qrcode');
 

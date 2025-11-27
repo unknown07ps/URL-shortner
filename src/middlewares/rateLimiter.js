@@ -1,8 +1,6 @@
-// src/middlewares/rateLimiter.js
-
 const rateLimit = require('express-rate-limit');
 
-// Try to load RedisStore, fallback to memory store if it fails
+//Try to load RedisStore, fallback to memory store if it fails
 let RedisStore;
 let storeConfig;
 
@@ -15,9 +13,9 @@ try {
     sendCommand: (...args) => redis.call(...args),
   };
   
-  console.log('✅ Using Redis for rate limiting');
+  console.log('Using Redis for rate limiting');
 } catch (error) {
-  console.warn('⚠️ Redis store not available, using memory store for rate limiting');
+  console.warn('Redis store not available, using memory store for rate limiting');
   RedisStore = null;
 }
 

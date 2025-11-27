@@ -1,5 +1,3 @@
-// src/routes/urlRoutes.js
-
 const express = require('express');
 const router = express.Router();
 const Url = require('../models/url');
@@ -8,7 +6,7 @@ const AnalyticsService = require('../services/analyticsService');
 const { createUrlLimiter, batchCreateLimiter, qrCodeLimiter } = require('../middlewares/rateLimiter');
 const { setCache, getCache, deleteCache } = require('../services/cacheService');
 
-// Helper function to generate short code
+//Helper function to generate short code
 function generateShortCode(length = 6) {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
@@ -18,7 +16,7 @@ function generateShortCode(length = 6) {
   return result;
 }
 
-// Helper function to validate URL
+//Helper function to validate URL
 function isValidUrl(url) {
   try {
     new URL(url);
@@ -28,7 +26,7 @@ function isValidUrl(url) {
   }
 }
 
-// POST /api/urls - Create short URL (with rate limiting)
+//POST /api/urls - Create short URL (with rate limiting)
 router.post('/', createUrlLimiter, async (req, res) => {
   try {
     const { 
@@ -40,7 +38,7 @@ router.post('/', createUrlLimiter, async (req, res) => {
       tags = []
     } = req.body;
 
-    // Validate original URL
+    //Validate original URL
     if (!originalUrl) {
       return res.status(400).json({ 
         success: false, 
@@ -55,7 +53,7 @@ router.post('/', createUrlLimiter, async (req, res) => {
       });
     }
 
-    // Check if custom alias already exists
+    //Check if custom alias already exists
     if (customAlias) {
       const existing = await Url.findOne({ 
         $or: [
@@ -72,15 +70,15 @@ router.post('/', createUrlLimiter, async (req, res) => {
       }
     }
 
-    // Generate short code
+    //Generate short code
     let shortCode = customAlias || generateShortCode();
     
-    // Ensure uniqueness
+    //Ensure uniqueness
     while (await Url.findOne({ shortCode })) {
       shortCode = generateShortCode();
     }
 
-    // Create URL document
+    //Create URL document
     const urlData = {
       originalUrl,
       shortCode,
@@ -90,7 +88,7 @@ router.post('/', createUrlLimiter, async (req, res) => {
       createdBy: AnalyticsService.getClientIP(req)
     };
 
-    // Set expiration if provided
+    //Set expiration if provided
     if (expiresIn) {
       const expirationDate = new Date();
       expirationDate.setHours(expirationDate.getHours() + parseInt(expiresIn));
@@ -99,7 +97,7 @@ router.post('/', createUrlLimiter, async (req, res) => {
 
     const url = new Url(urlData);
 
-    // Generate QR code if requested
+    //Generate QR code if requested
     if (generateQR) {
       const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
       const shortUrl = customDomain 
@@ -111,7 +109,7 @@ router.post('/', createUrlLimiter, async (req, res) => {
 
     await url.save();
 
-    // Cache the URL
+    //Cache the URL
     await setCache(`url:${shortCode}`, {
       originalUrl: url.originalUrl,
       shortCode: url.shortCode,
@@ -140,7 +138,7 @@ router.post('/', createUrlLimiter, async (req, res) => {
   }
 });
 
-// POST /api/urls/batch - Create multiple URLs at once
+//POST /api/urls/batch : Create multiple URLs at once
 router.post('/batch', batchCreateLimiter, async (req, res) => {
   try {
     const { urls } = req.body;
@@ -167,7 +165,7 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
       const { originalUrl, customAlias, tags } = urls[i];
 
       try {
-        // Validate URL
+        //Validate URL
         if (!originalUrl || !isValidUrl(originalUrl)) {
           errors.push({ 
             index: i, 
@@ -177,10 +175,10 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
           continue;
         }
 
-        // Generate short code
+        //Generate short code
         let shortCode = customAlias || generateShortCode();
         
-        // Check uniqueness
+        //Check uniqueness
         if (await Url.findOne({ shortCode })) {
           if (customAlias) {
             errors.push({ 
@@ -193,7 +191,7 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
           shortCode = generateShortCode();
         }
 
-        // Create URL
+        //Create URL
         const url = new Url({
           originalUrl,
           shortCode,
@@ -204,7 +202,7 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
 
         await url.save();
 
-        // Cache
+        //Cache
         await setCache(`url:${shortCode}`, {
           originalUrl: url.originalUrl,
           shortCode: url.shortCode
@@ -245,7 +243,7 @@ router.post('/batch', batchCreateLimiter, async (req, res) => {
   }
 });
 
-// GET /api/urls/:shortCode/qr - Generate QR code for existing URL
+//GET /api/urls/:shortCode/qr - Generate QR code for existing URL
 router.get('/:shortCode/qr', qrCodeLimiter, async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -296,7 +294,7 @@ router.get('/:shortCode/qr', qrCodeLimiter, async (req, res) => {
   }
 });
 
-// GET /api/urls/:shortCode/analytics - Get analytics for a URL
+//GET /api/urls/:shortCode/analytics - Get analytics for a URL
 router.get('/:shortCode/analytics', async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -339,7 +337,7 @@ router.get('/:shortCode/analytics', async (req, res) => {
   }
 });
 
-// GET /api/urls - Get all URLs (dashboard)
+//GET /api/urls - Get all URLs (dashboard)
 router.get('/', async (req, res) => {
   try {
     const { 
