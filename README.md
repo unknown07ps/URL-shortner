@@ -1,4 +1,6 @@
-# URL Shortener API
+# DaddyLnk
+
+Cut the noise. Keep the link.
 
 A professional URL shortening service with advanced features including analytics, QR code generation, caching, and rate limiting.
 
@@ -30,7 +32,7 @@ A professional URL shortening service with advanced features including analytics
 
 - Node.js (v18 or higher)
 - MongoDB
-- Redis
+- Redis (optional but recommended)
 - npm or yarn
 
 ## Installation
@@ -49,7 +51,7 @@ npm install
 3. Create a `.env` file in the root directory:
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/shortener
+MONGO_URI=mongodb://localhost:27017/daddylnk
 BASE_URL=http://localhost:3000
 
 REDIS_HOST=localhost
@@ -63,10 +65,8 @@ NODE_ENV=development
 
 5. Run the application:
 ```bash
-# Development mode
 npm run dev
 
-# Production mode
 npm start
 ```
 
@@ -267,7 +267,6 @@ The service automatically tracks:
 Use the included `test.html` file to test all endpoints in your browser:
 
 ```bash
-# Open test.html in your browser
 open test.html
 ```
 
@@ -281,26 +280,26 @@ npm run test:redis
 ```
 url-shortner/
 ├── src/
-│   ├── app.js                 # Express app configuration
-│   ├── server.js              # Server entry point
+│   ├── app.js
+│   ├── server.js
 │   ├── controllers/
-│   │   └── urlController.js   # URL handling logic
+│   │   └── urlController.js
 │   ├── models/
-│   │   └── url.js            # MongoDB schema
+│   │   └── url.js
 │   ├── routes/
-│   │   ├── url.js            # Basic routes
-│   │   ├── urlRoutes.js      # Advanced routes
-│   │   └── redirectRoute.js  # Redirect handler
+│   │   ├── url.js
+│   │   ├── urlRoutes.js
+│   │   └── redirectRoute.js
 │   ├── services/
-│   │   ├── cacheService.js   # Redis caching
-│   │   ├── counterService.js # Sequence generation
-│   │   ├── qrService.js      # QR code generation
-│   │   └── analyticsService.js # Analytics processing
+│   │   ├── cacheService.js
+│   │   ├── counterService.js
+│   │   ├── qrService.js
+│   │   └── analyticsService.js
 │   ├── middlewares/
-│   │   └── rateLimiter.js    # Rate limiting
+│   │   └── rateLimiter.js
 │   └── utils/
-│       └── base62.js         # Base62 encoding
-├── .env                       # Environment variables
+│       └── base62.js
+├── .env
 ├── .gitignore
 ├── package.json
 └── README.md
@@ -357,6 +356,11 @@ Common HTTP status codes:
 
 ## Deployment
 
+### Railway Deployment
+
+See [Railway_DEPLOYMENT.md](Railway_DEPLOYMENT.md) for detailed Railway deployment instructions.
+
+Quick setup:
 1. Set environment variables for production
 2. Ensure MongoDB and Redis are accessible
 3. Update `BASE_URL` to your domain
@@ -364,6 +368,12 @@ Common HTTP status codes:
 ```bash
 NODE_ENV=production npm start
 ```
+
+## Brand Identity
+
+**DaddyLnk** - Cut the noise. Keep the link.
+
+A modern, professional URL shortener that simplifies link sharing while providing powerful analytics and customization options.
 
 ## Contributing
 
