@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 const { apiLimiter } = require('./middlewares/rateLimiter');
 const urlRoutes = require('./routes/urlRoutes');
 
@@ -20,6 +21,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+app.use(express.static(path.join(__dirname, '..')));
+
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 } else {
@@ -34,7 +38,13 @@ app.get('/health', (req, res) => {
   });
 });
 
+
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'test.html'));
+});
+
+
+app.get('/api', (req, res) => {
   res.json({ 
     success: true,
     message: 'URL Shortener API',
@@ -149,6 +159,8 @@ mongoose.connect(process.env.MONGO_URI)
     
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`UI available at: http://localhost:${PORT}`);
+      console.log(`API documentation: http://localhost:${PORT}/api`);
       console.log(`Base URL: ${process.env.BASE_URL || `http://localhost:${PORT}`}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener Test - Debug Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status.checking {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f3f4f6;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .short-url {
+            margin-top: 10px;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            word-break: break-all;
+        }
+
+        .short-url a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        .debug {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1f2937;
+            color: #10b981;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        .qr-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .qr-container img {
+            max-width: 250px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            padding: 10px;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 URL Shortener Test</h1>
+        
+        <div id="status" class="status checking">
+            🔍 Checking server connection...
+        </div>
+
+        <div class="form-group">
+            <label for="apiUrl">API Server URL:</label>
+            <input type="text" id="apiUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
+        </div>
+
+        <div class="form-group">
+            <label for="originalUrl">URL to Shorten:</label>
+            <input type="url" id="originalUrl" placeholder="https://example.com" value="https://www.google.com">
+        </div>
+
+        <div class="form-group">
+            <label for="customAlias">Custom Alias (optional):</label>
+            <input type="text" id="customAlias" placeholder="my-link">
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="generateQR">
+            <label for="generateQR">Generate QR Code</label>
+        </div>
+
+        <button id="createBtn" onclick="createUrl()">Create Short URL</button>
+
+        <div id="result" class="result">
+            <h3>Result:</h3>
+            <div id="resultContent"></div>
+        </div>
+
+        <div id="debug" class="debug"></div>
+    </div>
+
+    <script>
+        let debugLog = [];
+        const API_URL = () => document.getElementById('apiUrl').value;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            debugLog.push(logEntry);
+            updateDebug();
+            console.log(logEntry);
+        }
+
+        function updateDebug() {
+            const debugDiv = document.getElementById('debug');
+            debugDiv.innerHTML = debugLog.slice(-10).join('\n');
+        }
+
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        async function checkServer() {
+            log('Checking if server is running...');
+            try {
+                const response = await fetch(`${API_URL()}/health`);
+                const data = await response.json();
+                log(`Server responded: ${JSON.stringify(data)}`);
+                
+                if (data.status === 'OK') {
+                    updateStatus('✅ Server is running!', 'success');
+                    return true;
+                } else {
+                    updateStatus('❌ Server responded but status is not OK', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`Server check failed: ${error.message}`, 'error');
+                updateStatus(`❌ Cannot connect to server at ${API_URL()}`, 'error');
+                return false;
+            }
+        }
+
+        async function createUrl() {
+            const originalUrl = document.getElementById('originalUrl').value;
+            const customAlias = document.getElementById('customAlias').value;
+            const generateQR = document.getElementById('generateQR').checked;
+            const btn = document.getElementById('createBtn');
+
+            if (!originalUrl) {
+                alert('Please enter a URL to shorten');
+                return;
+            }
+
+            log('Starting URL creation...');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            const requestBody = {
+                originalUrl,
+                generateQR
+            };
+
+            if (customAlias) {
+                requestBody.customAlias = customAlias;
+            }
+
+            log(`Request body: ${JSON.stringify(requestBody)}`);
+
+            try {
+                const response = await fetch(`${API_URL()}/api/urls`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                log(`Response status: ${response.status} ${response.statusText}`);
+
+                const data = await response.json();
+                log(`Response data: ${JSON.stringify(data)}`);
+
+                const resultDiv = document.getElementById('result');
+                const contentDiv = document.getElementById('resultContent');
+
+                if (data.success) {
+                    updateStatus('✅ URL created successfully!', 'success');
+                    
+                    let html = `
+                        <div class="short-url">
+                            <strong>Short URL:</strong><br>
+                            <a href="${data.data.shortUrl}" target="_blank">${data.data.shortUrl}</a>
+                        </div>
+                        <p style="margin-top: 15px;">
+                            <strong>Short Code:</strong> ${data.data.shortCode}<br>
+                            <strong>Original URL:</strong> ${data.data.originalUrl}<br>
+                            <strong>Created:</strong> ${new Date(data.data.createdAt).toLocaleString()}
+                        </p>
+                    `;
+
+                    if (data.data.qrCode) {
+                        html += `
+                            <div class="qr-container">
+                                <h4>QR Code:</h4>
+                                <img src="${data.data.qrCode}" alt="QR Code">
+                            </div>
+                        `;
+                    }
+
+                    contentDiv.innerHTML = html;
+                    resultDiv.classList.add('show');
+                } else {
+                    updateStatus(`❌ ${data.message}`, 'error');
+                    contentDiv.innerHTML = `<p style="color: #dc2626;">${data.message}</p>`;
+                    resultDiv.classList.add('show');
+                }
+
+            } catch (error) {
+                log(`Request failed: ${error.message}`, 'error');
+                updateStatus('❌ Request failed', 'error');
+                
+                const resultDiv = document.getElementById('result');
+                const contentDiv = document.getElementById('resultContent');
+                contentDiv.innerHTML = `<p style="color: #dc2626;">Error: ${error.message}</p>`;
+                resultDiv.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Short URL';
+            }
+        }
+
+        // Check server on load
+        window.addEventListener('load', () => {
+            checkServer();
+        });
+
+        // Allow Enter key to submit
+        document.getElementById('originalUrl').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createUrl();
+        });
+    </script>
+</body>
+</html>
