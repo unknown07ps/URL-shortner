@@ -158,9 +158,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-mongoose.connect(process.env.MONGO_URI)
+const mongoUri = process.env.MONGO_PUBLIC_URL || process.env.MONGO_URL || process.env.MONGO_URI;
+
+if (!mongoUri) {
+  console.error('MongoDB URI not found in environment variables');
+  console.error('Please set one of: MONGO_PUBLIC_URL, MONGO_URL, or MONGO_URI');
+  process.exit(1);
+}
+
+console.log('Attempting to connect to MongoDB...');
+console.log('Using connection string:', mongoUri.replace(/:[^:@]+@/, ':****@'));
+
+mongoose.connect(mongoUri, {
+  serverSelectionTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
+})
   .then(() => {
-    console.log('Connected to MongoDB');
+    console.log('Connected to MongoDB successfully');
     
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
@@ -170,7 +184,9 @@ mongoose.connect(process.env.MONGO_URI)
     });
   })
   .catch((error) => {
-    console.error('MongoDB connection error:', error);
+    console.error('MongoDB connection error:', error.message);
+    console.error('Connection string used:', mongoUri.replace(/:[^:@]+@/, ':****@'));
+    console.error('Make sure to use MONGO_PUBLIC_URL instead of MONGO_URI if on Railway');
     process.exit(1);
   });
 
