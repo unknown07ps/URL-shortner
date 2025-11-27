@@ -11,6 +11,8 @@ const urlRoutes = require('./routes/urlRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -160,11 +162,10 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('Connected to MongoDB');
     
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
-      console.log(`UI available at: http://localhost:${PORT}`);
-      console.log(`API documentation: http://localhost:${PORT}/api`);
-      console.log(`Base URL: ${process.env.BASE_URL || `http://localhost:${PORT}`}`);
+      console.log(`UI available at: ${process.env.BASE_URL || `http://localhost:${PORT}`}`);
+      console.log(`API documentation: ${process.env.BASE_URL || `http://localhost:${PORT}`}/api`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   })

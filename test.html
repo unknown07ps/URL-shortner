@@ -214,11 +214,10 @@
         <h1>URL Shortener</h1>
         <p class="subtitle">Test your URL shortening API</p>
 
-        <!-- Create Short URL -->
         <div class="section">
             <h2>Create Short URL</h2>
             <div class="input-group">
-                <label>Original URL *</label>
+                <label>Original URL</label>
                 <input type="url" id="originalUrl" placeholder="https://example.com" required>
             </div>
             <div class="input-group">
@@ -234,7 +233,6 @@
             <div id="shortUrlDisplay" class="short-url"></div>
         </div>
 
-        <!-- Get All URLs -->
         <div class="section">
             <h2>View All URLs</h2>
             <button onclick="getAllUrls()">Get All URLs</button>
@@ -242,7 +240,6 @@
             <div id="getAllResult" class="result"></div>
         </div>
 
-        <!-- Get Analytics -->
         <div class="section">
             <h2>Get URL Analytics</h2>
             <div class="input-group">
@@ -253,7 +250,6 @@
             <div id="analyticsResult" class="result"></div>
         </div>
 
-        <!-- Generate QR Code -->
         <div class="section">
             <h2>Generate QR Code</h2>
             <div class="input-group">
@@ -266,7 +262,7 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:3000';
+        const API_BASE = window.location.origin;
 
         async function createShortUrl() {
             const originalUrl = document.getElementById('originalUrl').value;
@@ -294,7 +290,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showResult('createResult', 'Short URL created successfully!', true, data);
+                    showResult('createResult', 'Short URL created successfully', true, data);
                     displayShortUrl(data.data);
                 } else {
                     showResult('createResult', data.message || 'Failed to create short URL', false, data);
@@ -333,7 +329,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showResult('analyticsResult', 'Analytics retrieved successfully!', true, data.data);
+                    showResult('analyticsResult', 'Analytics retrieved successfully', true, data.data);
                 } else {
                     showResult('analyticsResult', data.message || 'Failed to get analytics', false, data);
                 }
@@ -359,7 +355,7 @@
                     
                     const qrDiv = document.getElementById('qrResult');
                     qrDiv.innerHTML = `
-                        <h3>QR Code Generated!</h3>
+                        <h3>QR Code Generated</h3>
                         <img src="${imgUrl}" alt="QR Code">
                         <p><small>Scan this QR code to visit the shortened URL</small></p>
                     `;
@@ -396,7 +392,7 @@
             const div = document.getElementById('urlsList');
             
             if (urls.length === 0) {
-                div.innerHTML = '<p>No URLs found. Create one above!</p>';
+                div.innerHTML = '<p>No URLs found. Create one above</p>';
                 return;
             }
 
