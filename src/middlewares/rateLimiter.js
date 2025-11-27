@@ -1,29 +1,44 @@
 const rateLimit = require('express-rate-limit');
 
 let RedisStore;
-let storeConfig;
+let redis;
+let useRedis = false;
 
 try {
   const rateLimitRedis = require('rate-limit-redis');
   RedisStore = rateLimitRedis.default || rateLimitRedis;
-  const { redis } = require('../services/cacheService');
+  const cacheService = require('../services/cacheService');
+  redis = cacheService.redis;
   
-  storeConfig = {
-    sendCommand: (...args) => redis.call(...args),
-  };
-  
-  console.log('Using Redis for rate limiting');
+  if (redis) {
+    redis.once('ready', () => {
+      useRedis = true;
+      console.log('Using Redis for rate limiting');
+    });
+
+    redis.on('error', () => {
+      useRedis = false;
+      console.log('Redis unavailable, using memory store for rate limiting');
+    });
+  } else {
+    console.log('Redis not configured, using memory store for rate limiting');
+  }
 } catch (error) {
-  console.warn('Redis store not available, using memory store for rate limiting');
+  console.log('Redis store not available, using memory store for rate limiting');
   RedisStore = null;
 }
 
 function createStore(prefix) {
-  if (RedisStore && storeConfig) {
-    return new RedisStore({
-      ...storeConfig,
-      prefix: `rl:${prefix}:`,
-    });
+  if (RedisStore && redis && useRedis) {
+    try {
+      return new RedisStore({
+        sendCommand: (...args) => redis.call(...args),
+        prefix: `rl:${prefix}:`,
+      });
+    } catch (error) {
+      console.log(`Failed to create Redis store for ${prefix}, falling back to memory store`);
+      return undefined;
+    }
   }
   return undefined;
 }
