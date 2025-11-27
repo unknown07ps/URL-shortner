@@ -11,16 +11,20 @@ const urlRoutes = require('./routes/urlRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet());
-
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS || '*',
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
+}));
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -34,15 +38,14 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
   });
 });
-
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'test.html'));
 });
-
 
 app.get('/api', (req, res) => {
   res.json({ 
